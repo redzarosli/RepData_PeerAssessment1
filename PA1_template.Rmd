@@ -1,25 +1,105 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research Week 2 Project"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
+```{r setup, include=FALSE}
+#Read the zip file
+    fileName <- "repdata_data_activity.zip"
+    data <- unzip(fileName)
+    data <- read.csv(data)
+    
+#Preprocess the data to read the right type
+    data$date <- as.Date(data$date)
+```
 
-## Loading and preprocessing the data
+## R Markdown
+
+Below is the histogram of plots of the sample:
+
+```{r , echo=FALSE}
+    
+    cumStepPerDay <- aggregate(data$steps, by=list(Category=data$date), FUN=sum)
+    names(cumStepPerDay)[2] = 'Steps'
+    hist(cumStepPerDay$Steps,10,
+         main = paste("Histogram of" , "Cumulative Steps per Day"),
+         xlab='Cumulative steps per Day')
+    
+```
+
+Mean and Median number of steps.
+```{r, echo=FALSE}
+    paste('Mean number of steps is',mean(cumStepPerDay$Steps,na.rm=TRUE))
+    paste('Median number of steps is',median(cumStepPerDay$Steps,na.rm=TRUE))
+```
+
+Plot of average number of steps for every interval.
+```{r, echo=FALSE}
+    fiveMinInt <- aggregate(data$steps,by=list(Category=data$interval), FUN=mean, na.rm=TRUE)
+    names(fiveMinInt)[2] = 'Steps'
+    
+    plot(fiveMinInt$Category,fiveMinInt$Steps,type='l',
+         main='Average number of steps for every Interval',
+         ylab='Average number of steps',
+         xlab='Five minute interval (s)')
+```
+
+Which five minute interval has the most steps?
+```{r,echo=FALSE}
+    i <- which(fiveMinInt$Steps == max(fiveMinInt$Steps))
+    fiveMinInt[i,1]
+```
+
+How many rows have NA?
+```{r, echo=FALSE}
+    sum(is.na(data$steps))
+```
+
+Replace all NA values with mean of interval.
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+    library(dplyr)
+
+    head(data)
+
+    df <- data %>% 
+              group_by(interval) %>% 
+                  mutate(steps = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))
+    head(df,100)
+```
+
+Histogram after imputting data.
 
 
+```{r, echo=FALSE}
+    cumStepPerDay1 <- aggregate(df$steps, by=list(Category=df$date), FUN=sum)
+    names(cumStepPerDay1)[2] = 'Steps'
+    hist(cumStepPerDay1$Steps,10,
+         main = paste("Histogram of" , "Cumulative Steps per Day"),
+         xlab='Cumulative steps per Day')
+```
 
-## What is mean total number of steps taken per day?
+Mean and Median number of steps after imputting data.
+```{r, echo=FALSE}
+    paste('Mean number of steps is',mean(cumStepPerDay1$Steps))
+    paste('Median number of steps is',median(cumStepPerDay1$Steps,))
+```
+Imputting the data changes the median number of steps but not the mean.
 
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+```{r, echo=FALSE}
+    data$date <- as.Date(data$date)
+    day <- weekdays(data$date)
+    data <- cbind(data,day)
+    weekdays1 <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+    weekdayData <-  data[day %in% weekdays1,]
+    weekendData <-  data[!(day %in% weekdays1),]
+    fiveMinInt1 <- aggregate(weekdayData$steps,by=list(Category=weekdayData$interval), FUN=mean, na.rm=TRUE)
+    names(fiveMinInt1)[2] = 'Steps'
+    fiveMinInt2 <- aggregate(weekendData$steps,by=list(Category=weekendData$interval), FUN=mean, na.rm=TRUE)
+    names(fiveMinInt2)[2] = 'Steps'
+    
+    par(mfrow=c(2,1),mar=c(4,6,3,3))
+    plot(fiveMinInt1$Category,fiveMinInt1$Steps, type="l",ylab='Number of steps',xlab='Interval',main='Weekday')
+    plot(fiveMinInt2$Category,fiveMinInt2$Steps, type="l",ylab='Number of steps',xlab='Interval',main='Weekend')
+```
